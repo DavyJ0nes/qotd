@@ -1,6 +1,7 @@
 #!/bin/zsh
 # This is a real basic deployment script
 autoload -U colors && colors
+source .env
 #
 ### Set these variables
 dockerHost=$DOCKERPROD

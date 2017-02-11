@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestCache checks that data can be written and read from cache file
 func TestCache(t *testing.T) {
 	data := []byte("This is some data")
 	// checking write to cache
@@ -22,6 +23,8 @@ func TestCache(t *testing.T) {
 	}
 }
 
+// TestReset checks that removing the cache file works as expected
+// Also has benefit of cleaning up after testing
 func TestReset(t *testing.T) {
 	if err := Reset("cache-test.txt"); err != nil {
 		t.Errorf("Reset() returned error: %s", err)

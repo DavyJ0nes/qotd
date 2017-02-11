@@ -2,10 +2,7 @@ package content
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -15,6 +12,7 @@ import (
 
 var cacheFile = os.Getenv("QOTD_CACHE_FILE")
 
+// QuoteAPI is used to parse the QUOTE of the DAY API data
 type QuoteAPI struct {
 	Contents struct {
 		Quotes []struct {
@@ -27,6 +25,8 @@ type QuoteAPI struct {
 	} `json:"contents"`
 }
 
+// APIError is used to parse error response
+// not used at the moment
 type APIError struct {
 	Error struct {
 		Code    int    `json:"code"`
@@ -34,6 +34,7 @@ type APIError struct {
 	} `json:"error"`
 }
 
+// QuoteContent calls the QOTD API and writes the response to cache file
 func QuoteContent(w http.ResponseWriter, req *http.Request, apiUrl string) error {
 	res, err := http.Get(apiUrl)
 	if err != nil {
@@ -47,37 +48,47 @@ func QuoteContent(w http.ResponseWriter, req *http.Request, apiUrl string) error
 		return err
 	}
 
-	if res.StatusCode != 200 {
-		log.Println("Error: ", res.Status)
-		http.Redirect(w, req, "/fourohfour", http.StatusSeeOther)
-		return errors.New(fmt.Sprintf("API returned: %s", res.Status))
-	}
-
 	if err := cache.Write(cacheFile, body); err != nil {
 		return err
 	}
 	return nil
 }
 
-func CacheCheck(w http.ResponseWriter, req *http.Request) QuoteAPI {
+// CacheCheck checks if cache file exists as well as the staleness of the cache data
+func CacheCheck(w http.ResponseWriter, req *http.Request) (QuoteAPI, error) {
+	d := QuoteAPI{}
 	cachedData, err := cache.Read(cacheFile)
 	if err != nil {
-		log.Fatal(err)
+		return d, err
 	}
 
-	d := QuoteAPI{}
 	if err := json.Unmarshal(cachedData, &d); err != nil {
-		log.Fatal(err)
+		return d, err
+	}
+
+	if len(d.Contents.Quotes) < 1 {
+		if err := QuoteContent(w, req, "http://quotes.rest/qod.json?category=management"); err != nil {
+			return d, err
+		}
+		return d, err
 	}
 
 	// if cache is invalid then reset it.
 	today := time.Now().Format("2006-01-02")
 	cacheDate := d.Contents.Quotes[0].Date
-	log.Println("cacheDate", cacheDate)
+	err = cacheDateCheck(w, req, today, cacheDate)
+	if err != nil {
+		return d, err
+	}
+	return d, nil
+}
+
+// cacheDateCheck abstracts the cache date checking
+func cacheDateCheck(w http.ResponseWriter, req *http.Request, today, cacheDate string) error {
 	if today != cacheDate {
 		if err := QuoteContent(w, req, "http://quotes.rest/qod.json?category=management"); err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
-	return d
+	return nil
 }

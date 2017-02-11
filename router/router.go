@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -14,8 +15,10 @@ var (
 	cacheFile = os.Getenv("QOTD_CACHE_FILE")
 )
 
+// init Parses all html templates for the app
 func init() {
-	tmpl = template.Must(template.ParseFiles("templates/index.html"))
+	templatePath := fmt.Sprintf("%s/*.html", os.Getenv("QOTD_TEMPLATE_PATH"))
+	tmpl = template.Must(template.ParseGlob(templatePath))
 }
 
 // requestLogger logs request information in standard way
@@ -33,6 +36,7 @@ func Router() {
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
 
+// index is the main route for the application
 func index(w http.ResponseWriter, req *http.Request) {
 	requestLogger(req)
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
@@ -40,7 +44,11 @@ func index(w http.ResponseWriter, req *http.Request) {
 			log.Fatal(err)
 		}
 	}
-	d := content.CacheCheck(w, req)
+	d, err := content.CacheCheck(w, req)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 
 	data := struct {
 		Quote  string
