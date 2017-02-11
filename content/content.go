@@ -7,12 +7,13 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/davyj0nes/quoteOfTheDay/cache"
+	"github.com/davyj0nes/qotd/cache"
 )
 
-var cacheFile = "cache.txt"
+var cacheFile = os.Getenv("QOTD_CACHE_FILE")
 
 type QuoteAPI struct {
 	Contents struct {

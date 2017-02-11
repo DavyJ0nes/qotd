@@ -1,0 +1,82 @@
+#!/bin/zsh
+# This is a real basic deployment script
+autoload -U colors && colors
+#
+### Set these variables
+dockerHost=$DOCKERPROD
+###
+
+echo "$fg[blue]"
+
+case "$1" in
+  status)
+    ssh $dockerHost "sudo docker ps -a"
+    echo "$fg[none]"
+    exit 0
+    ;;
+  log|logs)
+    ssh $dockerHost "sudo docker logs -f qotd"
+    echo "$fg[none]"
+    exit 0
+    ;;
+  start)
+    ssh $dockerHost "sudo docker start qotd"
+    ssh $dockerHost "sudo docker ps -a"
+    echo "$fg[none]"
+    exit 0
+    ;;
+  # clean)
+  #   d_list=$(ssh $dockerHost "sudo docker ps -aq")
+  #   i_list=$(ssh $dockerHost "sudo docker images -aq")
+  #   ssh $dockerHost "sudo docker kill $d_list"
+  #   ssh $dockerHost "sudo docker rm $d_list"
+  #   ssh $dockerHost " sudo docker rmi $i_list"
+  #   ;;
+  deploy)
+    echo "$fg[yellow] # Starting Compile #"
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o releases/qotd .
+    if [ $? != 0 ]; then
+      echo "$fg[red] !! Failed to build"
+      echo "$fg[none]"
+      exit 1
+    fi
+    echo "$fg[yellow] # Compile Finished #"
+    echo "$fg[yellow] ##  Starting Container Build ##"
+    echo "$fg[blue]"
+    docker build -q --no-cache -t qotd .
+    imageID=$(docker images -q qotd:latest)
+    docker tag $imageID davyj0nes/qotd:latest
+    echo "$fg[yellow] ###  Pushing Container to Registry ###"
+    echo "$fg[blue]"
+    docker push davyj0nes/qotd
+
+    running=$(ssh $dockerHost "sudo docker ps -q -f name=qotd")
+    if [ "$running" != "" ]; then
+      echo "$fg[red]## Container Running ##"
+      echo "$fg[red]...Removing..."
+      ssh $dockerHost "sudo docker kill qotd && sudo docker rm qotd"
+      echo "$fg[green]Container Removed"
+      ssh $dockerHost "sudo docker ps"
+    fi
+  
+    echo "$fg[yellow]### Starting QOTD ####" 
+    echo "$fg[blue]"
+    ssh $dockerHost "sudo docker pull davyj0nes/qotd && \
+      sudo docker run --restart=unless-stopped -p 8888:8080 -d --name qotd davyj0nes/qotd"
+    echo "### QOTD RUNNING ###"
+    ssh $dockerHost "sudo docker ps -a"
+    echo "$fg[none]"
+    exit 0
+    ;;
+  *)
+    echo "$fg[red] Unknown Command"
+    echo "$fg[yellow] Usage:"
+    echo "$fg[yellow]   deploy <command>"
+    echo "$fg[yellow]   - status [Show docker ps]"
+    echo "$fg[yellow]   - log    [Follow logs of container]"
+    echo "$fg[yellow]   - deploy [Deploy new version to prod]"
+    # echo "$fg[yellow]   - clean  [Tidy up containers]"
+    echo "$fg[none]"
+    exit 1
+    ;;
+esac
