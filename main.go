@@ -12,7 +12,7 @@ import (
 var (
 	tmpl      *template.Template
 	e         = content.APIError{}
-	cacheFile = "cache.txt"
+	cacheFile = os.Getenv("QOTD_CACHE_FILE")
 )
 
 func init() {
@@ -27,7 +27,7 @@ func main() {
 
 func index(w http.ResponseWriter, req *http.Request) {
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
-		if err := content.QuoteContent(w, req, "http://quotes.rest/qod.json?category=management"); err != nil {
+		if err := content.QuoteContent(w, req, os.Getenv("QOTD_URL")); err != nil {
 			log.Fatal(err)
 		}
 	}
