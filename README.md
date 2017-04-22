@@ -1,3 +1,4 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/DavyJ0nes/qotd)](https://goreportcard.com/report/github.com/DavyJ0nes/qotd)
 # Quote of the Day
 
 ## Description
