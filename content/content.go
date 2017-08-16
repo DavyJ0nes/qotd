@@ -55,7 +55,7 @@ func QuoteContent(w http.ResponseWriter, req *http.Request, apiUrl string) error
 }
 
 // CacheCheck checks if cache file exists as well as the staleness of the cache data
-func CacheCheck(w http.ResponseWriter, req *http.Request) (QuoteAPI, error) {
+func CacheCheck(w http.ResponseWriter, req *http.Request) (*QuoteAPI, error) {
 	d := new(QuoteAPI)
 	cachedData, err := cache.Read(cacheFile)
 	if err != nil {
